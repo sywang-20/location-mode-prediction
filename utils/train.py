@@ -43,7 +43,7 @@ def send_to_device(inputs, device, config):
         for key in x_dict[1]:
             x_dict[1][key] = x_dict[1][key].to(device)
     else:
-        x = x.to(device)
+        x = x.to(device) # move to GPU
         for key in x_dict:
             x_dict[key] = x_dict[key].to(device)
     y = y.to(device)
@@ -123,7 +123,7 @@ def get_optimizer(config, model):
 def trainNet(config, model, train_loader, val_loader, device, log_dir):
 
     performance = {}
-
+    # define the optimizer
     optim = get_optimizer(config, model)
 
     # define learning rate schedule
@@ -211,42 +211,47 @@ def train(
     globaliter,
 ):
 
-    model.train()
+    model.train() # set model to training mode
 
     running_loss = 0.0
     # 1, 3, 5, 10, rr, total
     result_arr = np.array([0, 0, 0, 0, 0, 0, 0], dtype=np.float32)
     n_batches = len(train_loader)
 
-    CEL = torch.nn.CrossEntropyLoss(reduction="mean", ignore_index=0)
+    CEL = torch.nn.CrossEntropyLoss(reduction="mean", ignore_index=0)  # cross entropy loss
     # define start time
     start_time = time.time()
-    optim.zero_grad()
-    for i, inputs in enumerate(train_loader):
+    optim.zero_grad()  # clear gradients before computing the gradient for a new epoch
+    for i, inputs in enumerate(train_loader):   # i: batch index inputs: batch data
         globaliter += 1
 
-        x, y, x_dict, y_mode = send_to_device(inputs, device, config)
+        x, y, x_dict, y_mode = send_to_device(inputs, device, config)  # send data to device
 
         if config.if_loss_mode:
+            # whether to use the mode loss
             if config.if_embed_next_mode:
+                # whether to embed the next mode
                 logits_loc, logits_mode = model(x, x_dict, device, next_mode=y_mode)
             else:
                 logits_loc, logits_mode = model(x, x_dict, device)
+            # calculate the loss
             loss_size_loc = CEL(logits_loc, y.reshape(-1))
             loss_size_mode = CEL(logits_mode, y_mode.reshape(-1))
-
+            # add the loss (location + mode)
             loss_size = loss_size_loc + loss_size_mode
         else:
             logits_loc = model(x, x_dict, device)
             loss_size = CEL(logits_loc, y.reshape(-1))
+        # backward, update parameters during training
+        optim.zero_grad() # clear gradients before computing the gradient for a new batch
+        loss_size.backward() # compute gradients using backpropagation
 
-        optim.zero_grad()
-        loss_size.backward()
-
+        # clip the gradient, avoid gradient explosion
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
+        # update parameters
         optim.step()
         if scheduler_count == 0:
-            scheduler.step()
+            scheduler.step() # update learning rate
 
         # Print statistics
         running_loss += loss_size.item()

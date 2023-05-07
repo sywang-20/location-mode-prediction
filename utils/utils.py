@@ -148,7 +148,7 @@ def get_dataloaders(config):
     else:
         fn = collate_fn
 
-    train_loader = torch.utils.data.DataLoader(dataset_train, collate_fn=fn, **kwds_train)
+    train_loader = torch.utils.data.DataLoader(dataset_train, collate_fn=fn, **kwds_train)  # fn is the function to collate
     val_loader = torch.utils.data.DataLoader(dataset_val, collate_fn=fn, **kwds_val)
     test_loader = torch.utils.data.DataLoader(dataset_test, collate_fn=fn, **kwds_test)
 

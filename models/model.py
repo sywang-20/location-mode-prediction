@@ -15,7 +15,7 @@ class TransEncoder(nn.Module):
         self.d_input = config.base_emb_size
         self.Embedding = AllEmbedding(self.d_input, config)
 
-        # encoder
+        # encoder, multi-head attention
         encoder_layer = torch.nn.TransformerEncoderLayer(
             self.d_input,
             nhead=config.nhead,
@@ -24,7 +24,7 @@ class TransEncoder(nn.Module):
             dropout=config.dropout,
         )
         encoder_norm = torch.nn.LayerNorm(self.d_input)
-        self.encoder = torch.nn.TransformerEncoder(
+        self.encoder = torch.nn.TransformerEncoder( # TransformerEncoder is a stack of N encoder layers
             encoder_layer=encoder_layer,
             num_layers=config.num_encoder_layers,
             norm=encoder_norm,
@@ -37,13 +37,14 @@ class TransEncoder(nn.Module):
         self._init_weights()
 
     def forward(self, src, context_dict, device, next_mode=None) -> Tensor:
+        # specify the computation that the network performs on its input to produce its output
         emb = self.Embedding(src, context_dict)
         seq_len = context_dict["len"]
 
         # positional encoding, dropout performed inside
-        src_mask = self._generate_square_subsequent_mask(src.shape[0]).to(device)
-        src_padding_mask = (src == 0).transpose(0, 1).to(device)
-        out = self.encoder(emb, mask=src_mask, src_key_padding_mask=src_padding_mask)
+        src_mask = self._generate_square_subsequent_mask(src.shape[0]).to(device) # mask the future information
+        src_padding_mask = (src == 0).transpose(0, 1).to(device) # mask the padding information
+        out = self.encoder(emb, mask=src_mask, src_key_padding_mask=src_padding_mask)  # multi-head attention
 
         # only take the last timestep
         out = out.gather(
@@ -57,7 +58,10 @@ class TransEncoder(nn.Module):
             return self.fc(out, context_dict["user"])
 
     def _generate_square_subsequent_mask(self, sz):
+        # generate a square mask for the sequence. The masked positions are filled with float(‘-inf’).
         return torch.triu(torch.full((sz, sz), float("-inf")), diagonal=1)
+        # torch.triu() function then returns the upper triangular part of this tensor,
+        # including the main diagonal (diagonal=1), and sets the lower triangular part to zero.
 
     def _init_weights(self):
         """Initiate parameters in the transformer model."""
