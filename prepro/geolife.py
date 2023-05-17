@@ -137,8 +137,10 @@ def get_mode_geolife(df):
 
 if __name__ == "__main__":
     DBLOGIN_FILE = os.path.join(".", "paths.json")
+    print(DBLOGIN_FILE)
     with open(DBLOGIN_FILE) as json_file:
         CONFIG = json.load(json_file)
+    print(CONFIG)
 
     # dataset = {"gc", "geolife"}
     parser = argparse.ArgumentParser()
