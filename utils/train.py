@@ -231,7 +231,7 @@ def train(
             # whether to use the mode loss
             if config.if_embed_next_mode:
                 # whether to embed the next mode
-                logits_loc, logits_mode = model(x, x_dict, device, next_mode=y_mode)
+                logits_loc, logits_mode = model(x, x_dict, device, next_mode=y_mode) # n+1时刻的结果
             else:
                 logits_loc, logits_mode = model(x, x_dict, device)
             # calculate the loss
@@ -244,7 +244,7 @@ def train(
             loss_size = CEL(logits_loc, y.reshape(-1))
         # backward, update parameters during training
         optim.zero_grad() # clear gradients before computing the gradient for a new batch
-        loss_size.backward() # compute gradients using backpropagation
+        loss_size.backward() # compute gradients using backpropagation--> error
 
         # clip the gradient, avoid gradient explosion
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1)

@@ -1,4 +1,6 @@
-import torch, os
+import os
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+import torch
 import argparse
 import numpy as np
 import pandas as pd
@@ -20,9 +22,10 @@ setup_seed(42)
 
 
 def single_run(config, device, log_dir):
+    # 传入config，device，log_dir，返回result_ls
     result_ls = []
 
-    # get data
+    # get dataloader
     train_loader, val_loader, test_loader = get_dataloaders(config)
 
     # get modelp
@@ -66,11 +69,12 @@ if __name__ == "__main__":
     config = load_config(args.config)
     config = edict(config)
 
-    # save the conf
+    # save the conf, and create the save path
     log_dir = init_save_path(config)
 
-    #
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # set device
+    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device=torch.device('cpu')
 
     # run
     result_ls = []

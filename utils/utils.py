@@ -82,7 +82,7 @@ def get_test_result(config, best_model, test_loader, device):
 
 def get_models(config, device):
     total_params = 0
-
+    # 根据需要，选择模型
     if config.networkName == "transformer":
         model = TransEncoder(config=config).to(device)
     # elif config.networkName == "deepmove":
@@ -96,7 +96,7 @@ def get_models(config, device):
 
     else:
         raise Error
-    total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total_params = sum(p.numel() for p in model.parameters() if p.requires_grad) # 计算模型参数量
 
     print("Total number of trainable parameters: ", total_params)
 
@@ -104,11 +104,11 @@ def get_models(config, device):
 
 
 def get_dataloaders(config):
-
-    kwds_train = {
-        "shuffle": True,
-        "num_workers": 0,
-        "batch_size": config["batch_size"],
+    # create the dataloader
+    kwds_train = {  #a dictionary containing the arguments for the DataLoader
+        "shuffle": True, # shuffle data every epoch
+        "num_workers": 0, # number of subprocesses to use for data loading, 0 means that the data will be loaded in the main process
+        "batch_size": config["batch_size"], # how many samples per batch to load
     }
     kwds_val = {
         "shuffle": False,
@@ -121,6 +121,8 @@ def get_dataloaders(config):
         "batch_size": config["batch_size"],
     }
 
+    # create an instance of the class sp_loc_dataset, pass the config parameters
+    # 之后如果要调用这个类的function，就可以直接用dataset_train.function()，作用于dataset_train这个instance上
     dataset_train = sp_loc_dataset(
         config.source_root,
         data_type="train",
@@ -146,9 +148,15 @@ def get_dataloaders(config):
     if config.networkName == "deepmove":
         fn = deepmove_collate_fn
     else:
+        # function to collate data samples into batch tensors for the dataloader
         fn = collate_fn
 
-    train_loader = torch.utils.data.DataLoader(dataset_train, collate_fn=fn, **kwds_train)  # fn is the function to collate
+    # create the dataloader--> a pytorch dataloader object that can be used to iterate over the dataset
+    # do not return any value, but can be used to iterate over the dataset
+    # dataset_train: a dataset object from which to load the data
+    # collate_fn: the function to collate data samples into batch tensors
+    # **kwds_train: a dictionary containing the arguments for the DataLoader，最前面定义的那个dictionary
+    train_loader = torch.utils.data.DataLoader(dataset_train, collate_fn=fn, **kwds_train)
     val_loader = torch.utils.data.DataLoader(dataset_val, collate_fn=fn, **kwds_val)
     test_loader = torch.utils.data.DataLoader(dataset_test, collate_fn=fn, **kwds_test)
 

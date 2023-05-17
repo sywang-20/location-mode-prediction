@@ -9,27 +9,32 @@ from models.embed import AllEmbedding
 
 
 class TransEncoder(nn.Module):
+    # Transformer模型的结构，就是文中Figure 1所示的结构
     def __init__(self, config) -> None:
         super(TransEncoder, self).__init__()
-
-        self.d_input = config.base_emb_size
+        # d_input: 经过embedding layer之后的维度
+        # AllEmbedding: 自己定义的一个embedding layer，讲不同维度的特征分别embedding
+        self.d_input = config.base_emb_size # 64
         self.Embedding = AllEmbedding(self.d_input, config)
 
-        # encoder, multi-head attention
+        # multi-head attention
         encoder_layer = torch.nn.TransformerEncoderLayer(
-            self.d_input,
-            nhead=config.nhead,
+            self.d_input, # 64
+            nhead=config.nhead, # 8，multi-head attention的head数， Figure 3右边部分做8次
             activation="gelu",
-            dim_feedforward=config.dim_feedforward,
+            dim_feedforward=config.dim_feedforward, # 256
             dropout=config.dropout,
         )
-        encoder_norm = torch.nn.LayerNorm(self.d_input)
-        self.encoder = torch.nn.TransformerEncoder( # TransformerEncoder is a stack of N encoder layers
-            encoder_layer=encoder_layer,
-            num_layers=config.num_encoder_layers,
-            norm=encoder_norm,
+        encoder_norm = torch.nn.LayerNorm(self.d_input) # layer normalization
+
+        # transformer decoder,输出为out
+        self.encoder = torch.nn.TransformerEncoder(
+            encoder_layer=encoder_layer, # a single layer of the transformer encoder
+            num_layers=config.num_encoder_layers, # 4 layers in total
+            norm=encoder_norm, # layer normalization to be applied after each encoder_layer
         )
 
+        # fully connected layer,用于最后的prediction
         self.fc = FullyConnected(self.d_input, config, if_residual_layer=True)
         self.if_embed_next_mode = config.if_embed_next_mode
 
@@ -37,14 +42,15 @@ class TransEncoder(nn.Module):
         self._init_weights()
 
     def forward(self, src, context_dict, device, next_mode=None) -> Tensor:
-        # specify the computation that the network performs on its input to produce its output
+        # specify the computation that the network performs on its input to produce its output，整个模型的结构
+        # generate the embedding of the input
         emb = self.Embedding(src, context_dict)
         seq_len = context_dict["len"]
 
         # positional encoding, dropout performed inside
         src_mask = self._generate_square_subsequent_mask(src.shape[0]).to(device) # mask the future information
         src_padding_mask = (src == 0).transpose(0, 1).to(device) # mask the padding information
-        out = self.encoder(emb, mask=src_mask, src_key_padding_mask=src_padding_mask)  # multi-head attention
+        out = self.encoder(emb, mask=src_mask, src_key_padding_mask=src_padding_mask)  # Figure 3整个的结构，输出的是最后一层的结果
 
         # only take the last timestep
         out = out.gather(
@@ -52,6 +58,7 @@ class TransEncoder(nn.Module):
             seq_len.view([1, -1, 1]).expand([1, out.shape[1], out.shape[-1]]) - 1,
         ).squeeze(0)
 
+        # fully connected layer to get the final prediction
         if self.if_embed_next_mode:
             return self.fc(out, context_dict["user"], mode_emb=self.Embedding.get_modeEmbedding(), next_mode=next_mode)
         else:

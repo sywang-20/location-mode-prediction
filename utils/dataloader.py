@@ -150,6 +150,7 @@ class sp_loc_dataset(torch.utils.data.Dataset):
     def splitDataset(self, totalData):
         """Split dataset into train, vali and test."""
         totalData = totalData.groupby("user_id").apply(self.getSplitDaysUser)
+        totalData.index=totalData.index.droplevel() # drop the first level of index
 
         train_data = totalData.loc[totalData["Dataset"] == "train"].copy()
         vali_data = totalData.loc[totalData["Dataset"] == "vali"].copy()
@@ -199,6 +200,7 @@ class sp_loc_dataset(torch.utils.data.Dataset):
 
     def getValidSequence(self, input_df):
         valid_user_ls = applyParallel(input_df.groupby("user_id"), self.getValidSequenceUser, n_jobs=-1)
+        #valid_user_ls.index = valid_user_ls.index.droplevel()  # drop the first level of index
         return [item for sublist in valid_user_ls for item in sublist]
 
     def getValidSequenceUser(self, df):
@@ -286,6 +288,7 @@ def load_pk_file(save_path):
 
 
 def collate_fn(batch):
+    # batch: a subset of training examples that are processed together during a single iteration of training
     """function to collate data samples into batch tensors."""
     x_batch, y_batch, y_mode_batch = [], [], []
 
