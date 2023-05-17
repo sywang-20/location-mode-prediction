@@ -5,7 +5,7 @@ misc:
   total_loc_num: 2013
   # 111 users, ranging from 1 to 111
   # 0 reserved for padding
-  total_user_num: 112
+  total_user_num: 183  #112
 
   # 
   if_embed_loc: True
@@ -61,5 +61,5 @@ optimiser:
   lr_gamma: 0.1
 
 dataset:
-  source_root: ./data/
+  source_root: ./prepro/data/
   save_root: ./outputs/
